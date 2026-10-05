@@ -107,7 +107,6 @@
       color: #666;
       text-align: center;
     }
-
     /* Modal de confirmación de pago */
     .confirm-modal {
       position: fixed;
@@ -164,7 +163,6 @@
       cursor: pointer;
     }
     .confirm-btn-no:hover { background: #d1d5db; }
-
     /* ========== ADAPTABILIDAD A TODOS LOS DISPOSITIVOS ========== */
     @media (max-width: 900px) {
       .lz-booking-layout {
@@ -364,6 +362,7 @@
       'M9', 'M10'
     ];
 
+    // Cargar compras guardadas
     let comprados = JSON.parse(localStorage.getItem('asientosComprados') || '[]');
     let todosOcupados = [...ocupadosFijos, ...comprados];
 
@@ -373,7 +372,7 @@
     let tiempoRestante = TIEMPO_RESERVA;
     let intervaloReloj = null;
 
-    // Dibujar el mapa
+    // Redibujar mapa completo
     function dibujarMapa() {
       mapa.innerHTML = '';
       todosOcupados = [...ocupadosFijos, ...comprados];
@@ -531,12 +530,11 @@
       document.getElementById('timer').textContent = `${m}:${s}`;
     }
 
-    // Al dar "Ir a Pagar" → abre Mercado Pago y muestra confirmación
+    // Al dar "Ir a Pagar"
     document.getElementById('payBtn').addEventListener('click', () => {
       if (!seleccionados.length || yaPago) return;
 
       yaPago = true;
-      // Guardar los asientos como comprados
       comprados = [...comprados, ...seleccionados];
       localStorage.setItem('asientosComprados', JSON.stringify(comprados));
 
@@ -550,39 +548,31 @@
         }
       });
 
-      // Abrir enlace de pago
       window.open(ENLACE_PAGO, '_blank');
-
-      // Mostrar modal de confirmación (NO genera boleto todavía)
       document.getElementById('confirmModal').classList.add('active');
     });
 
-    // El usuario confirma que ya pagó → recién ahí se genera el boleto
+    // Confirmar pago → generar boleto
     document.getElementById('alreadyPaidBtn').addEventListener('click', () => {
       dibujarBoleto(datosBoleto());
-      // Reiniciar para la siguiente persona
+      // Reiniciar para nueva selección
       reiniciarReloj();
       seleccionados = [];
       yaPago = false;
       actualizarResumen();
-      dibujarMapa();
+      dibujarMapa(); // Refrescar el mapa con los nuevos ocupados
     });
 
-    // Aún no ha pagado → cerrar confirmación
+    // No ha pagado → deshacer
     document.getElementById('notPaidBtn').addEventListener('click', () => {
       document.getElementById('confirmModal').classList.remove('active');
       yaPago = false;
+      // Quitar de comprados
       comprados = comprados.filter(s => !seleccionados.includes(s));
       localStorage.setItem('asientosComprados', JSON.stringify(comprados));
-      // Devolver los asientos a seleccionados
-      seleccionados.forEach(id => {
-        const btn = document.querySelector(`[data-seat="${id}"]`);
-        if (btn) {
-          btn.classList.add('selected');
-          btn.classList.remove('occupied');
-          btn.disabled = false;
-        }
-      });
+      // Devolver visualmente
+      dibujarMapa();
+      seleccionados = [];
       actualizarResumen();
     });
 
