@@ -37,6 +37,7 @@
       cursor: pointer;
       color: #888;
       z-index: 10;
+      transition: color 0.2s;
     }
     .ticket-close:hover { color: #000; }
     .ticket-top-logo { text-align: center; margin-bottom: 35px; }
@@ -151,6 +152,7 @@
       border-radius: 8px;
       font-weight: 600;
       cursor: pointer;
+      transition: background 0.2s;
     }
     .confirm-btn-yes:hover { background: #059669; }
     .confirm-btn-no {
@@ -161,6 +163,7 @@
       border-radius: 8px;
       font-weight: 500;
       cursor: pointer;
+      transition: background 0.2s;
     }
     .confirm-btn-no:hover { background: #d1d5db; }
     /* ========== ADAPTABILIDAD A TODOS LOS DISPOSITIVOS ========== */
@@ -335,7 +338,7 @@
   </footer>
 
   <script>
-    // CONFIGURACIÓN
+    // ============== CONFIGURACIÓN ==============
     const PRECIO = 120;
     const CARGO_SERVICIO = 12;
     const ENLACE_PAGO = "https://mpago.la/141RkRB";
@@ -350,7 +353,7 @@
       ['A', 17], ['B', 17], ['C', 17], ['D', 17],
       ['E', 17], ['F', 17], ['G', 17], ['H', 17],
       ['I', 15, true], ['J', 17], ['K', 17], ['L', 17],
-      ['M', 17], ['N', 17], ['O', 17], ['P', 17], 
+      ['M', 17], ['N', 17], ['O', 17], ['P', 17], ['Q', 17]
     ];
 
     // Asientos ocupados desde el inicio
@@ -362,20 +365,28 @@
       'M9', 'M10'
     ];
 
-    // Cargar compras guardadas
+    // ============== VARIABLES ==============
     let comprados = JSON.parse(localStorage.getItem('asientosComprados') || '[]');
     let todosOcupados = [...ocupadosFijos, ...comprados];
-
+    
     const mapa = document.getElementById('seatingGrid');
     let seleccionados = [];
     let yaPago = false;
     let tiempoRestante = TIEMPO_RESERVA;
     let intervaloReloj = null;
 
-    // Redibujar mapa completo
-    function dibujarMapa() {
-      mapa.innerHTML = '';
+    // ============== FUNCIONES ==============
+    
+    // Recargar compras del almacenamiento (por si otra pestaña compró)
+    function recargarCompras() {
+      comprados = JSON.parse(localStorage.getItem('asientosComprados') || '[]');
       todosOcupados = [...ocupadosFijos, ...comprados];
+    }
+
+    // Dibujar el mapa completo
+    function dibujarMapa() {
+      recargarCompras();
+      mapa.innerHTML = '';
       
       filas.forEach(([letra, cantidad, accesible]) => {
         const filaDiv = document.createElement('div');
@@ -513,7 +524,7 @@
 
     // Reiniciar cronómetro
     function reiniciarReloj() {
-      clearInterval(intervaloReloj);
+      if (intervaloReloj) clearInterval(intervaloReloj);
       tiempoRestante = TIEMPO_RESERVA;
       actualizarRelojVisual();
       intervaloReloj = setInterval(() => {
@@ -529,6 +540,8 @@
       const s = String(tiempoRestante % 60).padStart(2, '0');
       document.getElementById('timer').textContent = `${m}:${s}`;
     }
+
+    // ============== EVENTOS ==============
 
     // Al dar "Ir a Pagar"
     document.getElementById('payBtn').addEventListener('click', () => {
@@ -555,12 +568,12 @@
     // Confirmar pago → generar boleto
     document.getElementById('alreadyPaidBtn').addEventListener('click', () => {
       dibujarBoleto(datosBoleto());
-      // Reiniciar para nueva selección
+      // Reiniciar estado para nueva selección
       reiniciarReloj();
       seleccionados = [];
       yaPago = false;
       actualizarResumen();
-      dibujarMapa(); // Refrescar el mapa con los nuevos ocupados
+      dibujarMapa();
     });
 
     // No ha pagado → deshacer
@@ -570,7 +583,7 @@
       // Quitar de comprados
       comprados = comprados.filter(s => !seleccionados.includes(s));
       localStorage.setItem('asientosComprados', JSON.stringify(comprados));
-      // Devolver visualmente
+      // Restaurar mapa y selección
       dibujarMapa();
       seleccionados = [];
       actualizarResumen();
@@ -581,7 +594,13 @@
       document.getElementById('ticketModal').classList.remove('active');
     });
 
-    // Inicializar
+    // Detectar cambios en otras pestañas/mismo navegador
+    window.addEventListener('storage', () => {
+      recargarCompras();
+      dibujarMapa();
+    });
+
+    // ============== INICIO ==============
     dibujarMapa();
     reiniciarReloj();
   </script>
