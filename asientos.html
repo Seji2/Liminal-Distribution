@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Selección de Asientos - Con la Marea</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="icon" type="image/png" href="img/icono.png">
+  <link rel="icon" type="image/icono.png" href="img/icono.png">
   <link rel="stylesheet" href="style.css">
   <style>
     .ticket-modal {
@@ -33,9 +33,10 @@
       right: 15px;
       background: transparent;
       border: none;
-      font-size: 1.4rem;
+      font-size: 1.5rem;
       cursor: pointer;
       color: #888;
+      z-index: 10;
     }
     .ticket-close:hover { color: #000; }
     .ticket-top-logo { text-align: center; margin-bottom: 35px; }
@@ -345,6 +346,7 @@
     const HORA = "5:00 p.m.";
     const FORMATO = "Super Vista Max";
     const ESTUDIO = "Tyread Studios • Dir. Elian Magaña";
+    const TIEMPO_RESERVA = 300; // 5 minutos en segundos
 
     const filas = [
       ['A', 17], ['B', 17], ['C', 17], ['D', 17],
@@ -368,30 +370,37 @@
     const mapa = document.getElementById('seatingGrid');
     let seleccionados = [];
     let yaPago = false;
+    let tiempoRestante = TIEMPO_RESERVA;
+    let intervaloReloj = null;
 
     // Dibujar el mapa
-    filas.forEach(([letra, cantidad, accesible]) => {
-      const filaDiv = document.createElement('div');
-      filaDiv.className = 'lz-seat-row' + (letra === 'I' ? ' row-separator' : '');
+    function dibujarMapa() {
+      mapa.innerHTML = '';
+      todosOcupados = [...ocupadosFijos, ...comprados];
+      
+      filas.forEach(([letra, cantidad, accesible]) => {
+        const filaDiv = document.createElement('div');
+        filaDiv.className = 'lz-seat-row' + (letra === 'I' ? ' row-separator' : '');
 
-      const etiqueta = document.createElement('span');
-      etiqueta.className = 'lz-row-label';
-      etiqueta.textContent = letra;
-      filaDiv.appendChild(etiqueta);
+        const etiqueta = document.createElement('span');
+        etiqueta.className = 'lz-row-label';
+        etiqueta.textContent = letra;
+        filaDiv.appendChild(etiqueta);
 
-      const grupo = document.createElement('div');
-      grupo.className = 'lz-seat-group';
+        const grupo = document.createElement('div');
+        grupo.className = 'lz-seat-group';
 
-      if (accesible) grupo.appendChild(crearBoton('I-IZQ', true));
-      for (let n = 1; n <= cantidad; n++) {
-        const id = `${letra}${n}`;
-        grupo.appendChild(crearBoton(id, false));
-      }
-      if (accesible) grupo.appendChild(crearBoton('I-DER', true));
+        if (accesible) grupo.appendChild(crearBoton('I-IZQ', true));
+        for (let n = 1; n <= cantidad; n++) {
+          const id = `${letra}${n}`;
+          grupo.appendChild(crearBoton(id, false));
+        }
+        if (accesible) grupo.appendChild(crearBoton('I-DER', true));
 
-      filaDiv.appendChild(grupo);
-      mapa.appendChild(filaDiv);
-    });
+        filaDiv.appendChild(grupo);
+        mapa.appendChild(filaDiv);
+      });
+    }
 
     function crearBoton(id, esAccesible) {
       const btn = document.createElement('button');
@@ -503,6 +512,25 @@
       document.getElementById('ticketModal').classList.add('active');
     }
 
+    // Reiniciar cronómetro
+    function reiniciarReloj() {
+      clearInterval(intervaloReloj);
+      tiempoRestante = TIEMPO_RESERVA;
+      actualizarRelojVisual();
+      intervaloReloj = setInterval(() => {
+        if (tiempoRestante > 0) {
+          tiempoRestante--;
+          actualizarRelojVisual();
+        }
+      }, 1000);
+    }
+
+    function actualizarRelojVisual() {
+      const m = String(Math.floor(tiempoRestante / 60)).padStart(2, '0');
+      const s = String(tiempoRestante % 60).padStart(2, '0');
+      document.getElementById('timer').textContent = `${m}:${s}`;
+    }
+
     // Al dar "Ir a Pagar" → abre Mercado Pago y muestra confirmación
     document.getElementById('payBtn').addEventListener('click', () => {
       if (!seleccionados.length || yaPago) return;
@@ -532,12 +560,18 @@
     // El usuario confirma que ya pagó → recién ahí se genera el boleto
     document.getElementById('alreadyPaidBtn').addEventListener('click', () => {
       dibujarBoleto(datosBoleto());
+      // Reiniciar para la siguiente persona
+      reiniciarReloj();
+      seleccionados = [];
+      yaPago = false;
+      actualizarResumen();
+      dibujarMapa();
     });
 
     // Aún no ha pagado → cerrar confirmación
     document.getElementById('notPaidBtn').addEventListener('click', () => {
       document.getElementById('confirmModal').classList.remove('active');
-      yaPago = false; // Permitir volver a intentar
+      yaPago = false;
       comprados = comprados.filter(s => !seleccionados.includes(s));
       localStorage.setItem('asientosComprados', JSON.stringify(comprados));
       // Devolver los asientos a seleccionados
@@ -557,17 +591,9 @@
       document.getElementById('ticketModal').classList.remove('active');
     });
 
-    // Tiempo
-    let tiempo = 300;
-    const reloj = document.getElementById('timer');
-    setInterval(() => {
-      if (tiempo > 0) {
-        tiempo--;
-        const m = String(Math.floor(tiempo / 60)).padStart(2, '0');
-        const s = String(tiempo % 60).padStart(2, '0');
-        reloj.textContent = `${m}:${s}`;
-      }
-    }, 1000);
+    // Inicializar
+    dibujarMapa();
+    reiniciarReloj();
   </script>
 </body>
 </html>
