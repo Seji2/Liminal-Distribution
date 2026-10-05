@@ -105,17 +105,6 @@
       color: #666;
       text-align: center;
     }
-    .admin-reset-btn {
-      margin-top: 15px;
-      background: #ef4444;
-      color: #fff;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.85rem;
-    }
-    .admin-reset-btn:hover { background: #dc2626; }
     @media (max-width: 600px) {
       .ticket-grid { grid-template-columns: 1fr; }
       .ticket-card { padding: 25px 20px; }
@@ -176,6 +165,13 @@
         <div class="lz-theater-scroll">
           <div class="lz-theater-map" id="seatingGrid"></div>
         </div>
+
+        <div class="lz-map-footer">
+          <button class="lz-clear-btn" id="clearBtn">
+            <i class="fa-solid fa-rotate-left"></i> Limpiar selección
+          </button>
+        </div>
+      </div>
 
       <aside class="lz-summary-card">
         <div class="lz-summary-heading">
@@ -257,7 +253,7 @@
       ['M', 17], ['N', 17], ['O', 17], ['P', 17], ['Q', 17]
     ];
 
-    // Asientos que ya están ocupados desde el inicio
+    // Asientos ocupados desde el inicio
     const ocupadosFijos = [
       'D4', 'D5', 'D6', 'E6', 'E7', 'E13', 'E14', 'E16',
       'F7', 'F8', 'F10', 'F12', 'F14', 'G3', 'G4', 'G8',
@@ -266,19 +262,14 @@
       'M9', 'M10'
     ];
 
-    // Cargar los que se compraron antes
     let comprados = JSON.parse(localStorage.getItem('asientosComprados') || '[]');
     let todosOcupados = [...ocupadosFijos, ...comprados];
 
     const mapa = document.getElementById('seatingGrid');
-    const btnReiniciar = document.getElementById('resetAllBtn');
     let seleccionados = [];
     let yaPago = false;
 
-    // Mostrar botón de reiniciar si ya hay asientos comprados
-    if (comprados.length > 0) btnReiniciar.style.display = 'inline-flex';
-
-    // Dibujar el mapa de asientos
+    // Dibujar el mapa
     filas.forEach(([letra, cantidad, accesible]) => {
       const filaDiv = document.createElement('div');
       filaDiv.className = 'lz-seat-row' + (letra === 'I' ? ' row-separator' : '');
@@ -292,12 +283,10 @@
       grupo.className = 'lz-seat-group';
 
       if (accesible) grupo.appendChild(crearBoton('I-IZQ', true));
-
       for (let n = 1; n <= cantidad; n++) {
         const id = `${letra}${n}`;
         grupo.appendChild(crearBoton(id, false));
       }
-
       if (accesible) grupo.appendChild(crearBoton('I-DER', true));
 
       filaDiv.appendChild(grupo);
@@ -362,14 +351,6 @@
       actualizarResumen();
     });
 
-    // Reiniciar TODOS los comprados (botón manual)
-    btnReiniciar.addEventListener('click', () => {
-      if (confirm('¿Borrar TODOS los asientos comprados?\nEsto no se puede deshacer.')) {
-        localStorage.removeItem('asientosComprados');
-        location.reload();
-      }
-    });
-
     // Generar boleto
     function datosBoleto() {
       if (!seleccionados.length) return null;
@@ -431,18 +412,14 @@
       document.getElementById('ticketModal').classList.add('active');
     }
 
-    // Al dar "Ir a Pagar"
+    // Al pagar
     document.getElementById('payBtn').addEventListener('click', () => {
       if (!seleccionados.length || yaPago) return;
 
       yaPago = true;
-
-      // ✅ Guardar como comprados para SIEMPRE
       comprados = [...comprados, ...seleccionados];
       localStorage.setItem('asientosComprados', JSON.stringify(comprados));
-      btnReiniciar.style.display = 'inline-flex'; // Mostrar botón de reinicio
 
-      // Marcar visualmente como ocupados
       seleccionados.forEach(id => {
         const btn = document.querySelector(`[data-seat="${id}"]`);
         if (btn) {
