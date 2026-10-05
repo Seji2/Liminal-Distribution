@@ -8,6 +8,7 @@
   <link rel="icon" type="image/png" href="img/icono.png">
   <link rel="stylesheet" href="style.css">
   <style>
+    /* ==== TUS ESTILOS IGUALES ==== */
     .ticket-modal {
       position: fixed;
       inset: 0;
@@ -108,7 +109,6 @@
       color: #666;
       text-align: center;
     }
-    /* Modal de confirmación de pago */
     .confirm-modal {
       position: fixed;
       inset: 0;
@@ -166,46 +166,24 @@
       transition: background 0.2s;
     }
     .confirm-btn-no:hover { background: #d1d5db; }
-    /* ========== ADAPTABILIDAD A TODOS LOS DISPOSITIVOS ========== */
     @media (max-width: 900px) {
-      .lz-booking-layout {
-        flex-direction: column !important;
-      }
-      .lz-map-card, .lz-summary-card {
-        width: 100% !important;
-        max-width: 100% !important;
-      }
+      .lz-booking-layout { flex-direction: column !important; }
+      .lz-map-card, .lz-summary-card { width: 100% !important; max-width: 100% !important; }
     }
     @media (max-width: 600px) {
       .ticket-grid { grid-template-columns: 1fr; }
       .ticket-card { padding: 25px 20px; }
       .ticket-divider { margin: 30px -20px; }
       .ticket-movie { font-size: 1.8rem; }
-      .lz-seat {
-        width: 28px !important;
-        height: 28px !important;
-        font-size: 0.7rem !important;
-      }
-      .lz-map-header {
-        flex-wrap: wrap;
-        gap: 12px;
-      }
-      .lz-timer {
-        width: 100%;
-        justify-content: flex-end;
-      }
+      .lz-seat { width: 28px !important; height: 28px !important; font-size: 0.7rem !important; }
+      .lz-map-header { flex-wrap: wrap; gap: 12px; }
+      .lz-timer { width: 100%; justify-content: flex-end; }
     }
     @media (max-width: 400px) {
-      .lz-seat {
-        width: 24px !important;
-        height: 24px !important;
-        font-size: 0.6rem !important;
-      }
-      .lz-row-label {
-        min-width: 20px;
-        font-size: 0.8rem;
-      }
+      .lz-seat { width: 24px !important; height: 24px !important; font-size: 0.6rem !important; }
+      .lz-row-label { min-width: 20px; font-size: 0.8rem; }
     }
+    .cargando { opacity: 0.5; pointer-events: none; }
   </style>
 </head>
 <body>
@@ -233,7 +211,7 @@
         <div class="lz-map-header">
           <div>
             <span class="lz-section-label">PASO 01</span>
-            <h2>Selecciona tus lugares</h2>
+            <h2>Selecciona tus lugares <span id="estadoConexion" style="font-size:0.7rem;color:#888;">(sincronizando...)</span></h2>
             <p>Haz clic en los asientos disponibles para reservarlos</p>
           </div>
           <div class="lz-timer">
@@ -313,7 +291,6 @@
     </div>
   </main>
 
-  <!-- Modal de confirmación de pago -->
   <div class="confirm-modal" id="confirmModal">
     <div class="confirm-card">
       <h3>¿Ya realizaste el pago?</h3>
@@ -325,7 +302,6 @@
     </div>
   </div>
 
-  <!-- Modal del boleto -->
   <div class="ticket-modal" id="ticketModal">
     <div class="ticket-card">
       <button class="ticket-close" id="closeTicket">&times;</button>
@@ -347,16 +323,25 @@
     const HORA = "5:00 p.m.";
     const FORMATO = "Super Vista Max";
     const ESTUDIO = "Tyread Studios • Dir. Elian Magaña";
-    const TIEMPO_RESERVA = 300; // 5 minutos en segundos
+    const TIEMPO_RESERVA = 300;
+
+    // ==== CONFIGURACIÓN DE SINCRONIZACIÓN ====
+    // INSTRUCCIONES: Crea un Gist en GitHub y pon aquí los datos:
+    // 1. Ve a https://gist.github.com/ → Crea un gist con nombre: asientos.json
+    // 2. Contenido: { "comprados": [] }
+    // 3. Copia el ID del gist y tu nombre de usuario abajo:
+    const GIST_ID = "PON_AQUI_EL_ID_DE_TU_GIST"; // Ejemplo: a1b2c3d4e5f6...
+    const GIST_ARCHIVO = "asientos.json";
+    const GIST_TOKEN = "PON_AQUI_TU_TOKEN_GITHUB"; // Crea en: https://github.com/settings/tokens → gist
 
     const filas = [
       ['A', 17], ['B', 17], ['C', 17], ['D', 17],
       ['E', 17], ['F', 17], ['G', 17], ['H', 17],
       ['I', 15, true], ['J', 17], ['K', 17], ['L', 17],
-      ['M', 17], ['N', 17], ['O', 17], ['P', 17], ['Q', 17]
+      ['M', 17], ['N', 17], ['O', 17], ['P', 17],
+      ['Q', 17] // ✅ Fila Q completa desde 1
     ];
 
-    // Asientos ocupados desde el inicio
     const ocupadosFijos = [
       'D4', 'D5', 'D6', 'E6', 'E7', 'E13', 'E14', 'E16',
       'F7', 'F8', 'F10', 'F12', 'F14', 'G3', 'G4', 'G8',
@@ -365,27 +350,83 @@
       'M9', 'M10'
     ];
 
-    // ============== VARIABLES ==============
-    let comprados = JSON.parse(localStorage.getItem('asientosComprados') || '[]');
-    let todosOcupados = [...ocupadosFijos, ...comprados];
-    
+    let comprados = [];
+    let todosOcupados = [];
     const mapa = document.getElementById('seatingGrid');
     let seleccionados = [];
     let yaPago = false;
     let tiempoRestante = TIEMPO_RESERVA;
     let intervaloReloj = null;
+    let sincronizando = false;
 
-    // ============== FUNCIONES ==============
-    
-    // Recargar compras del almacenamiento (por si otra pestaña compró)
-    function recargarCompras() {
-      comprados = JSON.parse(localStorage.getItem('asientosComprados') || '[]');
-      todosOcupados = [...ocupadosFijos, ...comprados];
+    // ============== SINCRONIZACIÓN CON GITHUB ==============
+    async function cargarDatosServidor() {
+      try {
+        const res = await fetch(`https://api.github.com/gists/${GIST_ID}`);
+        if (!res.ok) throw new Error("No se pudo conectar");
+        const datos = await res.json();
+        const contenido = JSON.parse(datos.files[GIST_ARCHIVO].content);
+        comprados = contenido.comprados || [];
+        todosOcupados = [...ocupadosFijos, ...comprados];
+        document.getElementById('estadoConexion').textContent = "✅ Conectado";
+        document.getElementById('estadoConexion').style.color = "#10b981";
+        return true;
+      } catch (e) {
+        console.error("Error al cargar:", e);
+        document.getElementById('estadoConexion').textContent = "⚠️ Sin conexión";
+        document.getElementById('estadoConexion').style.color = "#f59e0b";
+        // Fallback local
+        comprados = JSON.parse(localStorage.getItem('asientosComprados') || '[]');
+        todosOcupados = [...ocupadosFijos, ...comprados];
+        return false;
+      }
     }
 
-    // Dibujar el mapa completo
+    async function guardarDatosServidor() {
+      if (!GIST_ID || !GIST_TOKEN || GIST_ID.includes("PON_")) return false;
+      try {
+        sincronizando = true;
+        document.body.classList.add('cargando');
+        
+        // Obtener versión actual primero
+        const res = await fetch(`https://api.github.com/gists/${GIST_ID}`);
+        const actual = await res.json();
+        const existentes = JSON.parse(actual.files[GIST_ARCHIVO].content).comprados || [];
+        
+        // Combinar para no perder compras de otros
+        const todosJuntos = [...new Set([...existentes, ...seleccionados])];
+        
+        await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `token ${GIST_TOKEN}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            files: {
+              [GIST_ARCHIVO]: {
+                content: JSON.stringify({ comprados: todosJuntos }, null, 2)
+              }
+            }
+          })
+        });
+        
+        comprados = todosJuntos;
+        todosOcupados = [...ocupadosFijos, ...comprados];
+        localStorage.setItem('asientosComprados', JSON.stringify(comprados));
+        return true;
+      } catch (e) {
+        console.error("Error al guardar:", e);
+        localStorage.setItem('asientosComprados', JSON.stringify(comprados));
+        return false;
+      } finally {
+        sincronizando = false;
+        document.body.classList.remove('cargando');
+      }
+    }
+
+    // ============== FUNCIONES DEL MAPA ==============
     function dibujarMapa() {
-      recargarCompras();
       mapa.innerHTML = '';
       
       filas.forEach(([letra, cantidad, accesible]) => {
@@ -432,6 +473,8 @@
         alert('⚠️ Ya pagaste. Recarga la página para empezar de nuevo.');
         return;
       }
+      if (sincronizando) return;
+      
       if (boton.classList.contains('selected')) {
         boton.classList.remove('selected');
         seleccionados = seleccionados.filter(s => s !== id);
@@ -459,7 +502,6 @@
       btnPagar.classList.toggle('active', cantidad > 0);
     }
 
-    // Generar datos del boleto
     function datosBoleto() {
       if (!seleccionados.length) return null;
       const primera = seleccionados[0];
@@ -478,7 +520,6 @@
       };
     }
 
-    // Mostrar el boleto
     function dibujarBoleto(datos) {
       document.getElementById('ticketBody').innerHTML = `
         <div class="ticket-top-logo"><h2>SUPER VISTA MAX</h2></div>
@@ -522,7 +563,6 @@
       document.getElementById('ticketModal').classList.add('active');
     }
 
-    // Reiniciar cronómetro
     function reiniciarReloj() {
       if (intervaloReloj) clearInterval(intervaloReloj);
       tiempoRestante = TIEMPO_RESERVA;
@@ -542,16 +582,13 @@
     }
 
     // ============== EVENTOS ==============
-
-    // Al dar "Ir a Pagar"
-    document.getElementById('payBtn').addEventListener('click', () => {
-      if (!seleccionados.length || yaPago) return;
+    document.getElementById('payBtn').addEventListener('click', async () => {
+      if (!seleccionados.length || yaPago || sincronizando) return;
 
       yaPago = true;
-      comprados = [...comprados, ...seleccionados];
-      localStorage.setItem('asientosComprados', JSON.stringify(comprados));
-
-      // Marcar visualmente como ocupados
+      await guardarDatosServidor(); // Guarda en internet
+      
+      // Marcar visualmente
       seleccionados.forEach(id => {
         const btn = document.querySelector(`[data-seat="${id}"]`);
         if (btn) {
@@ -565,10 +602,8 @@
       document.getElementById('confirmModal').classList.add('active');
     });
 
-    // Confirmar pago → generar boleto
     document.getElementById('alreadyPaidBtn').addEventListener('click', () => {
       dibujarBoleto(datosBoleto());
-      // Reiniciar estado para nueva selección
       reiniciarReloj();
       seleccionados = [];
       yaPago = false;
@@ -576,33 +611,41 @@
       dibujarMapa();
     });
 
-    // No ha pagado → deshacer
-    document.getElementById('notPaidBtn').addEventListener('click', () => {
+    document.getElementById('notPaidBtn').addEventListener('click', async () => {
       document.getElementById('confirmModal').classList.remove('active');
       yaPago = false;
       // Quitar de comprados
       comprados = comprados.filter(s => !seleccionados.includes(s));
       localStorage.setItem('asientosComprados', JSON.stringify(comprados));
-      // Restaurar mapa y selección
+      await guardarDatosServidor();
       dibujarMapa();
       seleccionados = [];
       actualizarResumen();
     });
 
-    // Cerrar boleto
     document.getElementById('closeTicket').addEventListener('click', () => {
       document.getElementById('ticketModal').classList.remove('active');
     });
 
-    // Detectar cambios en otras pestañas/mismo navegador
-    window.addEventListener('storage', () => {
-      recargarCompras();
+    // 🔄 Actualización automática cada 8 segundos
+    setInterval(async () => {
+      if (sincronizando) return;
+      await cargarDatosServidor();
+      dibujarMapa();
+    }, 8000);
+
+    // Detectar cambios en misma pestaña
+    window.addEventListener('storage', async () => {
+      await cargarDatosServidor();
       dibujarMapa();
     });
 
     // ============== INICIO ==============
-    dibujarMapa();
-    reiniciarReloj();
+    (async () => {
+      await cargarDatosServidor();
+      dibujarMapa();
+      reiniciarReloj();
+    })();
   </script>
 </body>
 </html>
