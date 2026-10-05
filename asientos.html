@@ -105,11 +105,46 @@
       color: #666;
       text-align: center;
     }
+
+    /* ========== ADAPTABILIDAD A TODOS LOS DISPOSITIVOS ========== */
+    @media (max-width: 900px) {
+      .lz-booking-layout {
+        flex-direction: column !important;
+      }
+      .lz-map-card, .lz-summary-card {
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+    }
     @media (max-width: 600px) {
       .ticket-grid { grid-template-columns: 1fr; }
       .ticket-card { padding: 25px 20px; }
       .ticket-divider { margin: 30px -20px; }
-      .ticket-movie { font-size: 2rem; }
+      .ticket-movie { font-size: 1.8rem; }
+      .lz-seat {
+        width: 28px !important;
+        height: 28px !important;
+        font-size: 0.7rem !important;
+      }
+      .lz-map-header {
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .lz-timer {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+    @media (max-width: 400px) {
+      .lz-seat {
+        width: 24px !important;
+        height: 24px !important;
+        font-size: 0.6rem !important;
+      }
+      .lz-row-label {
+        min-width: 20px;
+        font-size: 0.8rem;
+      }
     }
   </style>
 </head>
@@ -166,11 +201,7 @@
           <div class="lz-theater-map" id="seatingGrid"></div>
         </div>
 
-        <div class="lz-map-footer">
-          <button class="lz-clear-btn" id="clearBtn">
-            <i class="fa-solid fa-rotate-left"></i> Limpiar selección
-          </button>
-        </div>
+        <!-- ✅ SIN BOTONES DE LIMPIAR NI REINICIAR -->
       </div>
 
       <aside class="lz-summary-card">
@@ -339,17 +370,6 @@
       btnPagar.disabled = !cantidad;
       btnPagar.classList.toggle('active', cantidad > 0);
     }
-
-    // Limpiar selección
-    document.getElementById('clearBtn').addEventListener('click', () => {
-      if (yaPago) {
-        alert('⚠️ Ya pagaste. Recarga la página.');
-        return;
-      }
-      document.querySelectorAll('.lz-seat.selected').forEach(b => b.classList.remove('selected'));
-      seleccionados = [];
-      actualizarResumen();
-    });
 
     // Generar boleto
     function datosBoleto() {
