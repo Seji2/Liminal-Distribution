@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Liminal Distribution - Con la Marea</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/png" href="img/icono.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="header">
+    <div class="container nav-container">
+      <a href="index.html" class="logo-link">
+        <img src="img/5.png" alt="Liminal Distribution" class="main-logo">
+      </a>
+      <nav class="nav-menu">
+        <a href="#"><i class="fa-solid fa-film"></i> Cartelera</a>
+        <a href="#"><i class="fa-solid fa-calendar-days"></i> Estrenos</a>
+        <a href="#"><i class="fa-solid fa-ticket"></i> Mis Boletos</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- HERO SECTION -->
+  <section class="hero-section">
+    <video class="hero-video" autoplay loop muted playsinline>
+      <source src="Videos/trailer.mp4" type="video/mp4">
+      Tu navegador no soporta videos HTML5.
+    </video>
+    <div class="hero-overlay"></div>
+    <div class="container hero-content">
+      <div class="poster-wrapper">
+        <img src="img/POSTER CON LA MAREA.jpeg" alt="Póster Con La Marea" class="poster-img">
+      </div>
+      <div class="movie-info">
+        <span class="badge">EN CARTELERA</span>
+        <h1 class="movie-title">CON LA MAREA</h1>
+        <p class="studio-tag">Un filme de Tyread Studios • Dirigida por Elian Magaña</p>
+        <div class="movie-meta">
+          <span class="rating">B-15</span>
+          <span><i class="fa-regular fa-clock"></i> 1h 50m</span>
+          <span><i class="fa-solid fa-tags"></i> Thriller / Drama / Acción</span>
+        </div>
+        <a href="#horarios" class="btn-primary">
+          <i class="fa-solid fa-ticket"></i> Conseguir Boletos
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <main class="container main-content">
+    <!-- TRÁILER + SINOPSIS -->
+    <section class="trailer-synopsis-grid">
+      <div class="trailer-box">
+        <h2>Ver Tráiler Oficial</h2>
+        <div class="trailer-container">
+          <video class="trailer-video" controls>
+            <source src="Videos/trailer.mp4" type="video/mp4">
+            Tu navegador no soporta la reproducción de video.
+          </video>
+        </div>
+      </div>
+      <div class="synopsis-box">
+        <h2>Sinopsis</h2>
+        <p class="synopsis-text">
+          En las costas de San Bruno, un joven pescador se enfrenta a la falta de oportunidades mientras la pesca furtiva transforma silenciosamente la vida del puerto. Al mismo tiempo, un investigador encubierto llega para descubrir quién se encuentra detrás de esta creciente amenaza.<br><br>
+          Cuando sus caminos se cruzan, la frontera entre supervivencia, ambición y justicia comienza a desaparecer.
+        </p>
+      </div>
+    </section>
+
+    <!-- CRÉDITOS -->
+    <section class="movie-details">
+      <div class="credits-grid">
+        <div class="credit-item">
+          <h3>Dirección</h3>
+          <p>Elian Magaña</p>
+        </div>
+        <div class="credit-item">
+          <h3>Reparto Principal</h3>
+          <p>Eric Nadal, Frida Estrada, Arturo Alcocer, Karin Saiden, Rossana Nadal, Moisés Ramírez, José Zapata, Zuleyma Rodríguez, Mauricio López, Paola Alcocer, Felipe Rodrigo Nadal</p>
+        </div>
+        <div class="credit-item">
+          <h3>Distribución y Formatos</h3>
+          <p>Liminal Distribution • Tradicional & Super Vista Max</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- HORARIOS & ENLACE DE COMPRA -->
+    <section id="horarios" class="showtimes-section">
+      <h2>Horarios de Funciones por Sede</h2>
+      
+      <div class="showtime-group">
+        <div class="format-header">
+          <h3>Centro Cultural del Olimpo</h3>
+          <span class="format-tag imax">Super Vista Max</span>
+          <span class="format-sub">11 de Noviembre</span>
+        </div>
+        <div class="showtime-list">
+          <!-- ✅ ENLACE CORRECTO Y ASEGURADO -->
+          <a href="asientos.html" class="time-slot" style="position:relative; z-index:999; cursor:pointer;">
+            5:00 p.m. — Comprar Boletos
+          </a>
+        </div>
+      </div>
+
+      <div class="showtime-group">
+        <div class="format-header">
+          <h3>Dzilam González</h3>
+          <span class="format-tag imax">Super Vista Max • 2° Tradicional</span>
+          <span class="format-sub">14 de Noviembre</span>
+        </div>
+        <div class="showtime-list">
+          <span class="time-slot soon">5:00 p.m. — Próximamente</span>
+          <span class="time-slot soon">8:00 p.m. — Próximamente</span>
+        </div>
+        <div class="format-header" style="margin-top: 20px;">
+          <span class="format-tag">1° Tradicional • 2° Super Vista Max</span>
+          <span class="format-sub">15 de Noviembre</span>
+        </div>
+        <div class="showtime-list">
+          <span class="time-slot soon">4:30 p.m. — Próximamente</span>
+          <span class="time-slot soon">7:00 p.m. — Próximamente</span>
+        </div>
+      </div>
+
+      <div class="showtime-group">
+        <div class="format-header">
+          <h3>Izamal</h3>
+          <span class="format-tag">Tradicional</span>
+          <span class="format-sub">21 de Noviembre</span>
+        </div>
+        <div class="showtime-list">
+          <span class="time-slot soon">7:00 p.m. — Próximamente</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-content">
+      <p>&copy; 2026 Liminal Distribution • Tyread Studios. Todos los derechos reservados.</p>
+      <div class="footer-links">
+        <a href="#">Términos</a>
+        <a href="#">Privacidad</a>
+        <a href="#">Contacto</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

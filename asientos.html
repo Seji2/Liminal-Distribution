@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Selección de Asientos - Con la Marea</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .ticket-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.92);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .ticket-modal.active { display: flex; }
+    .ticket-card {
+      background: #fff;
+      width: 100%;
+      max-width: 650px;
+      padding: 40px 35px;
+      position: relative;
+    }
+    .ticket-close {
+      position: absolute;
+      top: 12px;
+      right: 15px;
+      background: transparent;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: #888;
+    }
+    .ticket-close:hover { color: #000; }
+    .ticket-top-logo { text-align: center; margin-bottom: 35px; }
+    .ticket-top-logo h2 {
+      font-size: 1.6rem;
+      color: #334155;
+      font-weight: 300;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin: 0;
+    }
+    .ticket-movie {
+      font-size: 2.8rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: #d4af37;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .ticket-credits {
+      color: #666;
+      font-size: 0.95rem;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    .ticket-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 110px;
+      gap: 22px 15px;
+    }
+    .ticket-label {
+      font-size: 0.85rem;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+      display: block;
+    }
+    .ticket-value {
+      font-size: 1.05rem;
+      font-weight: 500;
+      color: #111;
+    }
+    .ticket-qr-col {
+      grid-row: span 4;
+      text-align: center;
+    }
+    .ticket-qr-col i {
+      font-size: 2.8rem;
+      color: #111;
+      margin-bottom: 6px;
+    }
+    .ticket-number { font-size: 0.8rem; color: #666; }
+    .ticket-divider {
+      margin: 30px -35px 20px;
+      border-bottom: 1px dashed #ddd;
+    }
+    .ticket-footer-text {
+      text-align: center;
+      font-size: 0.85rem;
+      color: #888;
+      margin-top: 10px;
+    }
+    .ticket-hint {
+      margin-top: 12px;
+      font-size: 0.8rem;
+      color: #666;
+      text-align: center;
+    }
+    .admin-reset-btn {
+      margin-top: 15px;
+      background: #ef4444;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+    .admin-reset-btn:hover { background: #dc2626; }
+    @media (max-width: 600px) {
+      .ticket-grid { grid-template-columns: 1fr; }
+      .ticket-card { padding: 25px 20px; }
+      .ticket-divider { margin: 30px -20px; }
+      .ticket-movie { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="container nav-container">
+      <a href="index.html" class="logo-link">
+        <img src="img/5.png" alt="Liminal Distribution" class="main-logo">
+      </a>
+      <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Cambiar Función</a>
+    </div>
+  </header>
+
+  <main class="container lz-seat-page">
+    <div class="lz-booking-header">
+      <a href="index.html" class="back-btn"><i class="fa-solid fa-chevron-left"></i> Volver a detalles</a>
+      <div class="lz-movie-heading">
+        <span class="lz-eyebrow">SALA PRINCIPAL</span>
+        <h1>CON LA MAREA</h1>
+        <p><i class="fa-regular fa-clock"></i> 1h 50m • Clasificación B-15</p>
+      </div>
+    </div>
+
+    <div class="lz-booking-layout">
+      <div class="lz-map-card">
+        <div class="lz-map-header">
+          <div>
+            <span class="lz-section-label">PASO 01</span>
+            <h2>Selecciona tus lugares</h2>
+            <p>Haz clic en los asientos disponibles para reservarlos</p>
+          </div>
+          <div class="lz-timer">
+            <i class="fa-regular fa-hourglass-half"></i>
+            <div>
+              <small>Tiempo restante</small>
+              <strong id="timer">05:00</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="lz-seat-status">
+          <div><span class="lz-status-dot available"></span> Disponible</div>
+          <div><span class="lz-status-dot occupied"></span> Ocupado</div>
+          <div><span class="lz-status-dot selected"></span> Seleccionado</div>
+          <div><span class="lz-status-dot accessible"></span> Accesible</div>
+        </div>
+
+        <div class="lz-screen-zone">
+          <div class="lz-screen"></div>
+          <p class="lz-screen-text"><i class="fa-solid fa-display"></i> PANTALLA</p>
+        </div>
+
+        <div class="lz-theater-scroll">
+          <div class="lz-theater-map" id="seatingGrid"></div>
+        </div>
+
+        <div class="lz-map-footer">
+          <button class="lz-clear-btn" id="clearBtn">
+            <i class="fa-solid fa-rotate-left"></i> Limpiar selección
+          </button>
+          <button class="admin-reset-btn" id="resetAllBtn" style="display:none;">
+            <i class="fa-solid fa-trash"></i> Reiniciar todos los asientos
+          </button>
+        </div>
+      </div>
+
+      <aside class="lz-summary-card">
+        <div class="lz-summary-heading">
+          <div class="lz-summary-icon"><i class="fa-solid fa-receipt"></i></div>
+          <div>
+            <span>PASO 02</span>
+            <h2>Resumen de Reserva</h2>
+          </div>
+        </div>
+
+        <div class="lz-film-box">
+          <div class="lz-film-icon"><i class="fa-solid fa-film"></i></div>
+          <div>
+            <strong>Con la Marea</strong>
+            <span id="summaryDetails">Super Vista Max — Centro Cultural del Olimpo • 11 de Noviembre • 5:00 p.m.</span>
+          </div>
+        </div>
+
+        <div class="lz-summary-list">
+          <div class="lz-summary-row">
+            <span>Boletos ($120.00 c/u):</span>
+            <strong id="ticketCount">0</strong>
+          </div>
+          <div class="lz-summary-row">
+            <span>Asientos:</span>
+            <strong id="selectedSeatsList">-</strong>
+          </div>
+          <div class="lz-summary-row">
+            <span>Subtotal:</span>
+            <strong id="subtotal">$0.00</strong>
+          </div>
+          <div class="lz-summary-row">
+            <span>Costo de servicio:</span>
+            <strong id="serviceFeeText">$0.00</strong>
+          </div>
+        </div>
+
+        <div class="lz-divider"></div>
+
+        <div class="lz-total">
+          <span>Total a pagar:</span>
+          <strong id="totalPrice">$0.00</strong>
+        </div>
+
+        <button class="lz-pay-btn" id="payBtn" disabled>
+          <i class="fa-solid fa-lock"></i> Ir a Pagar
+        </button>
+        <p class="lz-security"><i class="fa-solid fa-shield-halved"></i> Pago seguro por Mercado Pago</p>
+      </aside>
+    </div>
+  </main>
+
+  <div class="ticket-modal" id="ticketModal">
+    <div class="ticket-card">
+      <button class="ticket-close" id="closeTicket">&times;</button>
+      <div id="ticketBody"></div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>© 2026 Liminal Distribution • Tyread Studios. Todos los derechos reservados.</p>
+  </footer>
+
+  <script>
+    // CONFIGURACIÓN
+    const PRECIO = 120;
+    const CARGO_SERVICIO = 12;
+    const ENLACE_PAGO = "https://mpago.la/141RkRB";
+    const FUNCION = "Centro Cultural del Olimpo";
+    const FECHA = "11 de Noviembre";
+    const HORA = "5:00 p.m.";
+    const FORMATO = "Super Vista Max";
+    const ESTUDIO = "Tyread Studios • Dir. Elian Magaña";
+
+    const filas = [
+      ['A', 17], ['B', 17], ['C', 17], ['D', 17],
+      ['E', 17], ['F', 17], ['G', 17], ['H', 17],
+      ['I', 15, true], ['J', 17], ['K', 17], ['L', 17],
+      ['M', 17], ['N', 17], ['O', 17], ['P', 17], ['Q', 17]
+    ];
+
+    // Asientos que ya están ocupados desde el inicio
+    const ocupadosFijos = [
+      'D4', 'D5', 'D6', 'E6', 'E7', 'E13', 'E14', 'E16',
+      'F7', 'F8', 'F10', 'F12', 'F14', 'G3', 'G4', 'G8',
+      'G13', 'G15', 'G16', 'I1', 'I2', 'I3', 'I5', 'I12', 'I13', 'I15',
+      'K4','K5','K6','K7','K8','K9',
+      'M9', 'M10'
+    ];
+
+    // Cargar los que se compraron antes
+    let comprados = JSON.parse(localStorage.getItem('asientosComprados') || '[]');
+    let todosOcupados = [...ocupadosFijos, ...comprados];
+
+    const mapa = document.getElementById('seatingGrid');
+    const btnReiniciar = document.getElementById('resetAllBtn');
+    let seleccionados = [];
+    let yaPago = false;
+
+    // Mostrar botón de reiniciar si ya hay asientos comprados
+    if (comprados.length > 0) btnReiniciar.style.display = 'inline-flex';
+
+    // Dibujar el mapa de asientos
+    filas.forEach(([letra, cantidad, accesible]) => {
+      const filaDiv = document.createElement('div');
+      filaDiv.className = 'lz-seat-row' + (letra === 'I' ? ' row-separator' : '');
+
+      const etiqueta = document.createElement('span');
+      etiqueta.className = 'lz-row-label';
+      etiqueta.textContent = letra;
+      filaDiv.appendChild(etiqueta);
+
+      const grupo = document.createElement('div');
+      grupo.className = 'lz-seat-group';
+
+      if (accesible) grupo.appendChild(crearBoton('I-IZQ', true));
+
+      for (let n = 1; n <= cantidad; n++) {
+        const id = `${letra}${n}`;
+        grupo.appendChild(crearBoton(id, false));
+      }
+
+      if (accesible) grupo.appendChild(crearBoton('I-DER', true));
+
+      filaDiv.appendChild(grupo);
+      mapa.appendChild(filaDiv);
+    });
+
+    function crearBoton(id, esAccesible) {
+      const btn = document.createElement('button');
+      btn.className = 'lz-seat' + (esAccesible ? ' lz-seat-accessible' : '');
+      btn.innerHTML = esAccesible ? '<i class="fa-solid fa-wheelchair"></i>' : id.replace(/[A-Z-]/g, '');
+      btn.dataset.seat = id;
+
+      if (todosOcupados.includes(id)) {
+        btn.classList.add('occupied');
+        btn.disabled = true;
+      } else {
+        btn.addEventListener('click', () => alternar(btn, id));
+      }
+      return btn;
+    }
+
+    function alternar(boton, id) {
+      if (yaPago) {
+        alert('⚠️ Ya pagaste. Recarga la página para empezar de nuevo.');
+        return;
+      }
+      if (boton.classList.contains('selected')) {
+        boton.classList.remove('selected');
+        seleccionados = seleccionados.filter(s => s !== id);
+      } else {
+        boton.classList.add('selected');
+        seleccionados.push(id);
+      }
+      actualizarResumen();
+    }
+
+    function actualizarResumen() {
+      const cantidad = seleccionados.length;
+      const subtotal = cantidad * PRECIO;
+      const cargo = cantidad > 0 ? CARGO_SERVICIO : 0;
+      const total = subtotal + cargo;
+
+      document.getElementById('ticketCount').textContent = cantidad;
+      document.getElementById('selectedSeatsList').textContent = cantidad ? seleccionados.join(', ') : '-';
+      document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
+      document.getElementById('serviceFeeText').textContent = `$${cargo.toFixed(2)}`;
+      document.getElementById('totalPrice').textContent = `$${total.toFixed(2)}`;
+
+      const btnPagar = document.getElementById('payBtn');
+      btnPagar.disabled = !cantidad;
+      btnPagar.classList.toggle('active', cantidad > 0);
+    }
+
+    // Limpiar selección
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      if (yaPago) {
+        alert('⚠️ Ya pagaste. Recarga la página.');
+        return;
+      }
+      document.querySelectorAll('.lz-seat.selected').forEach(b => b.classList.remove('selected'));
+      seleccionados = [];
+      actualizarResumen();
+    });
+
+    // Reiniciar TODOS los comprados (botón manual)
+    btnReiniciar.addEventListener('click', () => {
+      if (confirm('¿Borrar TODOS los asientos comprados?\nEsto no se puede deshacer.')) {
+        localStorage.removeItem('asientosComprados');
+        location.reload();
+      }
+    });
+
+    // Generar boleto
+    function datosBoleto() {
+      if (!seleccionados.length) return null;
+      const primera = seleccionados[0];
+      const fila = primera.replace(/\d|-/g, '').charAt(0);
+      const asientos = seleccionados.map(s => s.replace(/[A-Z-]/g, '')).join(', ');
+      return {
+        pelicula: 'CON LA MAREA',
+        funcion: FUNCION,
+        fecha: FECHA,
+        hora: HORA,
+        formato: FORMATO,
+        fila: fila,
+        asientos: asientos,
+        numero: Math.floor(Math.random() * 900000) + 100000,
+        estudio: ESTUDIO
+      };
+    }
+
+    function dibujarBoleto(datos) {
+      document.getElementById('ticketBody').innerHTML = `
+        <div class="ticket-top-logo"><h2>SUPER VISTA MAX</h2></div>
+        <h1 class="ticket-movie">${datos.pelicula}</h1>
+        <p class="ticket-credits">${datos.estudio}</p>
+        <div class="ticket-grid">
+          <div>
+            <span class="ticket-label">Función</span>
+            <div class="ticket-value">${datos.funcion}</div>
+          </div>
+          <div>
+            <span class="ticket-label">Fecha</span>
+            <div class="ticket-value">${datos.fecha}</div>
+          </div>
+          <div class="ticket-qr-col">
+            <i class="fa-solid fa-qrcode"></i>
+            <div class="ticket-number">Nº ${datos.numero}</div>
+          </div>
+          <div>
+            <span class="ticket-label">Hora</span>
+            <div class="ticket-value">${datos.hora}</div>
+          </div>
+          <div>
+            <span class="ticket-label">Formato</span>
+            <div class="ticket-value">${datos.formato}</div>
+          </div>
+          <div>
+            <span class="ticket-label">Fila</span>
+            <div class="ticket-value">${datos.fila}</div>
+          </div>
+          <div>
+            <span class="ticket-label">Asientos</span>
+            <div class="ticket-value">${datos.asientos}</div>
+          </div>
+        </div>
+        <div class="ticket-divider"></div>
+        <p class="ticket-footer-text">Presenta este boleto en la entrada • Liminal Distribution © 2026</p>
+        <p class="ticket-hint">📸 Puedes tomar captura de pantalla</p>
+      `;
+      document.getElementById('ticketModal').classList.add('active');
+    }
+
+    // Al dar "Ir a Pagar"
+    document.getElementById('payBtn').addEventListener('click', () => {
+      if (!seleccionados.length || yaPago) return;
+
+      yaPago = true;
+
+      // ✅ Guardar como comprados para SIEMPRE
+      comprados = [...comprados, ...seleccionados];
+      localStorage.setItem('asientosComprados', JSON.stringify(comprados));
+      btnReiniciar.style.display = 'inline-flex'; // Mostrar botón de reinicio
+
+      // Marcar visualmente como ocupados
+      seleccionados.forEach(id => {
+        const btn = document.querySelector(`[data-seat="${id}"]`);
+        if (btn) {
+          btn.classList.remove('selected');
+          btn.classList.add('occupied');
+          btn.disabled = true;
+        }
+      });
+
+      window.open(ENLACE_PAGO, '_blank');
+      setTimeout(() => dibujarBoleto(datosBoleto()), 2000);
+    });
+
+    // Cerrar boleto
+    document.getElementById('closeTicket').addEventListener('click', () => {
+      document.getElementById('ticketModal').classList.remove('active');
+    });
+
+    // Tiempo
+    let tiempo = 300;
+    const reloj = document.getElementById('timer');
+    setInterval(() => {
+      if (tiempo > 0) {
+        tiempo--;
+        const m = String(Math.floor(tiempo / 60)).padStart(2, '0');
+        const s = String(tiempo % 60).padStart(2, '0');
+        reloj.textContent = `${m}:${s}`;
+      }
+    }, 1000);
+  </script>
+</body>
+</html>
