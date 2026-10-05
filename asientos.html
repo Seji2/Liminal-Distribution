@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Selección de Asientos - Con la Marea</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="icon" type="image/png" href="img/icono.png">
   <link rel="stylesheet" href="style.css">
   <style>
     .ticket-modal {
@@ -106,6 +107,63 @@
       text-align: center;
     }
 
+    /* Modal de confirmación de pago */
+    .confirm-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.92);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      padding: 20px;
+    }
+    .confirm-modal.active { display: flex; }
+    .confirm-card {
+      background: #fff;
+      padding: 30px 25px;
+      border-radius: 12px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+    }
+    .confirm-card h3 {
+      color: #111;
+      margin-bottom: 12px;
+      font-size: 1.3rem;
+    }
+    .confirm-card p {
+      color: #666;
+      margin-bottom: 24px;
+      font-size: 0.95rem;
+    }
+    .confirm-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .confirm-btn-yes {
+      background: #10b981;
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .confirm-btn-yes:hover { background: #059669; }
+    .confirm-btn-no {
+      background: #e5e7eb;
+      color: #374151;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .confirm-btn-no:hover { background: #d1d5db; }
+
     /* ========== ADAPTABILIDAD A TODOS LOS DISPOSITIVOS ========== */
     @media (max-width: 900px) {
       .lz-booking-layout {
@@ -200,8 +258,6 @@
         <div class="lz-theater-scroll">
           <div class="lz-theater-map" id="seatingGrid"></div>
         </div>
-
-        <!-- ✅ SIN BOTONES DE LIMPIAR NI REINICIAR -->
       </div>
 
       <aside class="lz-summary-card">
@@ -255,6 +311,19 @@
     </div>
   </main>
 
+  <!-- Modal de confirmación de pago -->
+  <div class="confirm-modal" id="confirmModal">
+    <div class="confirm-card">
+      <h3>¿Ya realizaste el pago?</h3>
+      <p>Una vez confirmado, se generará tu boleto. Asegúrate de haber completado el pago en la ventana de Mercado Pago.</p>
+      <div class="confirm-buttons">
+        <button class="confirm-btn-no" id="notPaidBtn">Aún no, seguir pagando</button>
+        <button class="confirm-btn-yes" id="alreadyPaidBtn">✅ Sí, ya pagué — Generar boleto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal del boleto -->
   <div class="ticket-modal" id="ticketModal">
     <div class="ticket-card">
       <button class="ticket-close" id="closeTicket">&times;</button>
@@ -371,7 +440,7 @@
       btnPagar.classList.toggle('active', cantidad > 0);
     }
 
-    // Generar boleto
+    // Generar datos del boleto
     function datosBoleto() {
       if (!seleccionados.length) return null;
       const primera = seleccionados[0];
@@ -390,6 +459,7 @@
       };
     }
 
+    // Mostrar el boleto
     function dibujarBoleto(datos) {
       document.getElementById('ticketBody').innerHTML = `
         <div class="ticket-top-logo"><h2>SUPER VISTA MAX</h2></div>
@@ -427,19 +497,22 @@
         </div>
         <div class="ticket-divider"></div>
         <p class="ticket-footer-text">Presenta este boleto en la entrada • Liminal Distribution © 2026</p>
-        <p class="ticket-hint">📸 Puedes tomar captura de pantalla</p>
+        <p class="ticket-hint">📸 Toma captura de pantalla como comprobante</p>
       `;
+      document.getElementById('confirmModal').classList.remove('active');
       document.getElementById('ticketModal').classList.add('active');
     }
 
-    // Al pagar
+    // Al dar "Ir a Pagar" → abre Mercado Pago y muestra confirmación
     document.getElementById('payBtn').addEventListener('click', () => {
       if (!seleccionados.length || yaPago) return;
 
       yaPago = true;
+      // Guardar los asientos como comprados
       comprados = [...comprados, ...seleccionados];
       localStorage.setItem('asientosComprados', JSON.stringify(comprados));
 
+      // Marcar visualmente como ocupados
       seleccionados.forEach(id => {
         const btn = document.querySelector(`[data-seat="${id}"]`);
         if (btn) {
@@ -449,8 +522,34 @@
         }
       });
 
+      // Abrir enlace de pago
       window.open(ENLACE_PAGO, '_blank');
-      setTimeout(() => dibujarBoleto(datosBoleto()), 2000);
+
+      // Mostrar modal de confirmación (NO genera boleto todavía)
+      document.getElementById('confirmModal').classList.add('active');
+    });
+
+    // El usuario confirma que ya pagó → recién ahí se genera el boleto
+    document.getElementById('alreadyPaidBtn').addEventListener('click', () => {
+      dibujarBoleto(datosBoleto());
+    });
+
+    // Aún no ha pagado → cerrar confirmación
+    document.getElementById('notPaidBtn').addEventListener('click', () => {
+      document.getElementById('confirmModal').classList.remove('active');
+      yaPago = false; // Permitir volver a intentar
+      comprados = comprados.filter(s => !seleccionados.includes(s));
+      localStorage.setItem('asientosComprados', JSON.stringify(comprados));
+      // Devolver los asientos a seleccionados
+      seleccionados.forEach(id => {
+        const btn = document.querySelector(`[data-seat="${id}"]`);
+        if (btn) {
+          btn.classList.add('selected');
+          btn.classList.remove('occupied');
+          btn.disabled = false;
+        }
+      });
+      actualizarResumen();
     });
 
     // Cerrar boleto
