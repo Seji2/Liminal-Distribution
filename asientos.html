@@ -211,7 +211,7 @@
         <div class="lz-map-header">
           <div>
             <span class="lz-section-label">PASO 01</span>
-            <h2>Selecciona tus lugares <span id="estadoConexion" style="font-size:0.7rem;color:#888;">(sincronizando...)</span></h2>
+            <h2>Selecciona tus lugares <span id="estadoConexion" style="font-size:0.7rem;color:#888;">(cargando...)</span></h2>
             <p>Haz clic en los asientos disponibles para reservarlos</p>
           </div>
           <div class="lz-timer">
@@ -287,6 +287,9 @@
           <i class="fa-solid fa-lock"></i> Ir a Pagar
         </button>
         <p class="lz-security"><i class="fa-solid fa-shield-halved"></i> Pago seguro por Mercado Pago</p>
+        <p style="font-size:0.72rem;color:#888;margin-top:8px;text-align:center;">
+          Los asientos se confirman únicamente después de indicar que el pago fue realizado.
+        </p>
       </aside>
     </div>
   </main>
@@ -325,14 +328,15 @@
     const ESTUDIO = "Tyread Studios • Dir. Elian Magaña";
     const TIEMPO_RESERVA = 300;
 
-    // ==== CONFIGURACIÓN DE SINCRONIZACIÓN ====
-    // INSTRUCCIONES: Crea un Gist en GitHub y pon aquí los datos:
-    // 1. Ve a https://gist.github.com/ → Crea un gist con nombre: asientos.json
-    // 2. Contenido: { "comprados": [] }
-    // 3. Copia el ID del gist y tu nombre de usuario abajo:
-    const GIST_ID = "PON_AQUI_EL_ID_DE_TU_GIST"; // Ejemplo: a1b2c3d4e5f6...
-    const GIST_ARCHIVO = "asientos.json";
-    const GIST_TOKEN = "PON_AQUI_TU_TOKEN_GITHUB"; // Crea en: https://github.com/settings/tokens → gist
+    // ==== ALMACENAMIENTO DE ASIENTOS ====
+    // Esta versión NO expone tokens de GitHub en el navegador.
+    // Los asientos se guardan localmente en este dispositivo.
+    //
+    // IMPORTANTE:
+    // Para sincronizar compras entre distintos celulares/computadoras
+    // necesitas un backend seguro (por ejemplo, Apps Script, Firebase
+    // o Supabase). No pongas un GitHub Personal Access Token aquí.
+    const STORAGE_KEY = "liminal_con_la_marea_asientos";
 
     const filas = [
       ['A', 17], ['B', 17], ['C', 17], ['D', 17],
@@ -358,71 +362,49 @@
     let tiempoRestante = TIEMPO_RESERVA;
     let intervaloReloj = null;
     let sincronizando = false;
+    let pagoPendiente = false;
 
-    // ============== SINCRONIZACIÓN CON GITHUB ==============
-    async function cargarDatosServidor() {
+    // ============== ALMACENAMIENTO LOCAL ==============
+    function cargarDatosServidor() {
       try {
-        const res = await fetch(`https://api.github.com/gists/${GIST_ID}`);
-        if (!res.ok) throw new Error("No se pudo conectar");
-        const datos = await res.json();
-        const contenido = JSON.parse(datos.files[GIST_ARCHIVO].content);
-        comprados = contenido.comprados || [];
+        const guardados = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        comprados = Array.isArray(guardados) ? guardados : [];
         todosOcupados = [...ocupadosFijos, ...comprados];
-        document.getElementById('estadoConexion').textContent = "✅ Conectado";
+
+        document.getElementById('estadoConexion').textContent = "● Disponible";
         document.getElementById('estadoConexion').style.color = "#10b981";
         return true;
       } catch (e) {
-        console.error("Error al cargar:", e);
-        document.getElementById('estadoConexion').textContent = "⚠️ Sin conexión";
+        console.error("Error al cargar asientos:", e);
+        comprados = [];
+        todosOcupados = [...ocupadosFijos];
+
+        document.getElementById('estadoConexion').textContent = "⚠️ Modo local";
         document.getElementById('estadoConexion').style.color = "#f59e0b";
-        // Fallback local
-        comprados = JSON.parse(localStorage.getItem('asientosComprados') || '[]');
-        todosOcupados = [...ocupadosFijos, ...comprados];
         return false;
       }
     }
 
-    async function guardarDatosServidor() {
-      if (!GIST_ID || !GIST_TOKEN || GIST_ID.includes("PON_")) return false;
+    function guardarDatosServidor() {
       try {
-        sincronizando = true;
-        document.body.classList.add('cargando');
-        
-        // Obtener versión actual primero
-        const res = await fetch(`https://api.github.com/gists/${GIST_ID}`);
-        const actual = await res.json();
-        const existentes = JSON.parse(actual.files[GIST_ARCHIVO].content).comprados || [];
-        
-        // Combinar para no perder compras de otros
-        const todosJuntos = [...new Set([...existentes, ...seleccionados])];
-        
-        await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `token ${GIST_TOKEN}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            files: {
-              [GIST_ARCHIVO]: {
-                content: JSON.stringify({ comprados: todosJuntos }, null, 2)
-              }
-            }
-          })
-        });
-        
-        comprados = todosJuntos;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(comprados));
         todosOcupados = [...ocupadosFijos, ...comprados];
-        localStorage.setItem('asientosComprados', JSON.stringify(comprados));
         return true;
       } catch (e) {
-        console.error("Error al guardar:", e);
-        localStorage.setItem('asientosComprados', JSON.stringify(comprados));
+        console.error("Error al guardar asientos:", e);
         return false;
-      } finally {
-        sincronizando = false;
-        document.body.classList.remove('cargando');
       }
+    }
+
+    function reservarSeleccionadosLocalmente() {
+      const nuevos = seleccionados.filter(id => !comprados.includes(id));
+      comprados = [...new Set([...comprados, ...nuevos])];
+      return guardarDatosServidor();
+    }
+
+    function liberarSeleccionadosLocalmente() {
+      comprados = comprados.filter(s => !seleccionados.includes(s));
+      return guardarDatosServidor();
     }
 
     // ============== FUNCIONES DEL MAPA ==============
@@ -603,41 +585,62 @@
     });
 
     document.getElementById('alreadyPaidBtn').addEventListener('click', () => {
-      dibujarBoleto(datosBoleto());
+      if (!seleccionados.length) return;
+
+      // Solo ahora se marcan como comprados.
+      const datos = datosBoleto();
+      reservarSeleccionadosLocalmente();
+
+      yaPago = true;
+      pagoPendiente = false;
+
+      // Marcar visualmente los asientos
+      seleccionados.forEach(id => {
+        const btn = document.querySelector(`[data-seat="${id}"]`);
+        if (btn) {
+          btn.classList.remove('selected');
+          btn.classList.add('occupied');
+          btn.disabled = true;
+        }
+      });
+
+      dibujarBoleto(datos);
       reiniciarReloj();
       seleccionados = [];
-      yaPago = false;
       actualizarResumen();
-      dibujarMapa();
     });
 
-    document.getElementById('notPaidBtn').addEventListener('click', async () => {
+    document.getElementById('notPaidBtn').addEventListener('click', () => {
       document.getElementById('confirmModal').classList.remove('active');
-      yaPago = false;
-      // Quitar de comprados
-      comprados = comprados.filter(s => !seleccionados.includes(s));
-      localStorage.setItem('asientosComprados', JSON.stringify(comprados));
-      await guardarDatosServidor();
-      dibujarMapa();
+
+      // Como todavía no habíamos reservado los asientos,
+      // simplemente liberamos la selección visual.
       seleccionados = [];
+      yaPago = false;
+      pagoPendiente = false;
+
       actualizarResumen();
+      dibujarMapa();
     });
 
     document.getElementById('closeTicket').addEventListener('click', () => {
       document.getElementById('ticketModal').classList.remove('active');
     });
 
-    // 🔄 Actualización automática cada 8 segundos
-    setInterval(async () => {
-      if (sincronizando) return;
-      await cargarDatosServidor();
+    // 🔄 Revisar cambios locales cada 8 segundos.
+    // Esto permite que dos pestañas del mismo navegador se mantengan actualizadas.
+    setInterval(() => {
+      if (sincronizando || yaPago || seleccionados.length) return;
+      cargarDatosServidor();
       dibujarMapa();
     }, 8000);
 
-    // Detectar cambios en misma pestaña
-    window.addEventListener('storage', async () => {
-      await cargarDatosServidor();
-      dibujarMapa();
+    // Detectar cambios de localStorage en otras pestañas.
+    window.addEventListener('storage', (event) => {
+      if (event.key === STORAGE_KEY) {
+        cargarDatosServidor();
+        dibujarMapa();
+      }
     });
 
     // ============== INICIO ==============
